@@ -1,0 +1,61 @@
+PROPERTY VALUATION REPORT
+
+Date: {valuation_date}
+Report ID: {report_id}
+
+=== PROPERTY DETAILS ===
+
+Property Address: {property_address}
+Property Type: {property_type}
+Total Area (sqft): {total_area}
+Land Area (sqft): {land_area}
+
+=== OWNER INFORMATION ===
+
+Owner Name: {owner_name}
+Contact Number: {owner_contact}
+Email: {owner_email}
+
+=== VALUATION DETAILS ===
+
+Valuation Purpose: {valuation_purpose}
+Market Value: {market_value}
+Assessed Value: {assessed_value}
+Valuation Method: {valuation_method}
+
+=== PROPERTY DESCRIPTION ===
+
+{property_description}
+
+=== COMPARABLE PROPERTIES ===
+
+Property 1: {comparable_1_address}
+Value: {comparable_1_value}
+
+Property 2: {comparable_2_address}
+Value: {comparable_2_value}
+
+=== SURVEYOR INFORMATION ===
+
+Surveyor Name: {surveyor_name}
+License Number: {surveyor_license}
+Contact: {surveyor_contact}
+Company: {surveyor_company}
+
+=== BANK/LENDER DETAILS ===
+
+Bank Name: {bank_name}
+Branch: {branch_name}
+Loan Amount: {loan_amount}
+
+=== REMARKS ===
+
+{remarks}
+
+=== SIGNATURE ===
+
+Signed by: {surveyor_name}
+Date: {report_date}
+Signature: _______________
+
+--- END OF REPORT ---
