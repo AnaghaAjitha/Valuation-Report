@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getReportBuffer, deleteReport } from '@/lib/database';
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -17,7 +17,11 @@ export async function GET(
 
     const reportBuffer = await getReportBuffer(reportId);
 
-    const response = new NextResponse(reportBuffer);
+    const responseBody = reportBuffer.buffer.slice(
+      reportBuffer.byteOffset,
+      reportBuffer.byteOffset + reportBuffer.byteLength
+    ) as ArrayBuffer;
+    const response = new NextResponse(responseBody);
     response.headers.set(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -38,7 +42,7 @@ export async function GET(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
