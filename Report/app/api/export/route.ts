@@ -1,54 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Document, Packer, Paragraph, TextRun } from 'docx';
-import mammoth from 'mammoth';
 import { getTemplateBuffer, saveReport } from '@/lib/database';
-
-const FIELD_REGEX = /\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g;
-
-async function replacePlaceholders(
-  arrayBuffer: ArrayBuffer,
-  data: Record<string, string>
-): Promise<ArrayBuffer> {
-  try {
-    // Extract the document's HTML
-    const result = await mammoth.convertToHtml({ arrayBuffer });
-    let html = result.value;
-
-    // Replace placeholders with actual data
-    for (const [key, value] of Object.entries(data)) {
-      const regex = new RegExp(`\\{${key}\\}`, 'g');
-      html = html.replace(regex, value || '');
-    }
-
-    // Create a new document with the replaced content
-    const paragraphs = html
-      .split(/<\/?p[^>]*>/g)
-      .filter((text) => text.trim())
-      .map(
-        (text) =>
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: text.replace(/<[^>]*>/g, ''), // Remove HTML tags
-              }),
-            ],
-          })
-      );
-
-    const doc = new Document({
-      sections: [
-        {
-          children: paragraphs.length > 0 ? paragraphs : [new Paragraph('Document generated successfully')],
-        },
-      ],
-    });
-
-    return await Packer.toBuffer(doc);
-  } catch (error) {
-    console.error('Conversion error:', error);
-    throw error;
-  }
-}
+import { fillDocxTemplate } from '@/lib/docxTemplate';
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,8 +25,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Replace placeholders with actual data
-    const resultBuffer = await replacePlaceholders(templateBuffer, data);
+    // Replace placeholders in the original DOCX package so formatting is preserved.
+    const resultBuffer = await fillDocxTemplate(templateBuffer, data);
 
     // Save report to database
     try {
@@ -92,7 +44,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Return the file as a download
-    const response = new NextResponse(resultBuffer);
+    const responseBody = resultBuffer.buffer.slice(
+      resultBuffer.byteOffset,
+      resultBuffer.byteOffset + resultBuffer.byteLength
+    ) as ArrayBuffer;
+    const response = new NextResponse(responseBody);
     response.headers.set(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'

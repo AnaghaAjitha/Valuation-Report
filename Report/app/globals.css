@@ -44,6 +44,71 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.form-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  align-items: start;
+  gap: 20px;
+}
+
+.extract-panel {
+  position: sticky;
+  top: 20px;
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.extract-panel-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #2c3e50;
+}
+
+.extract-panel-header p {
+  margin: 8px 0 16px;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.extract-file-name {
+  margin: 14px 0 10px;
+  color: #666;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.extract-textarea {
+  width: 100%;
+  min-height: 520px;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  resize: vertical;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.extract-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.extract-empty {
+  margin-top: 14px;
+  padding: 18px;
+  border: 1px dashed #bdc3c7;
+  border-radius: 6px;
+  color: #666;
+  font-size: 14px;
+  text-align: center;
+}
+
 .upload-box {
   border: 2px dashed #3498db;
   border-radius: 8px;
@@ -223,6 +288,14 @@ button.danger:hover {
 }
 
 @media (max-width: 768px) {
+  .form-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .extract-panel {
+    position: static;
+  }
+
   .form-row {
     grid-template-columns: 1fr;
   }

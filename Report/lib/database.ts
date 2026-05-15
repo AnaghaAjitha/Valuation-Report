@@ -1,9 +1,13 @@
 import fs from 'fs/promises';
 import path from 'path';
+import mammoth from 'mammoth';
 
+const ASSET_TEMPLATES_DIR = path.join(process.cwd(), 'assets', 'templates');
 const TEMPLATES_DIR = path.join(process.cwd(), 'data', 'templates');
 const REPORTS_DIR = path.join(process.cwd(), 'data', 'reports');
 const DB_FILE = path.join(process.cwd(), 'data', 'db.json');
+const FIELD_REGEX =
+  /\$\s*([a-zA-Z_][a-zA-Z0-9_ -]*?)\s*\$|\{\s*([a-zA-Z_][a-zA-Z0-9_ -]*?)\s*\}/g;
 
 interface TemplateMetadata {
   id: string;
@@ -30,6 +34,7 @@ interface Database {
 // Initialize directories
 async function initializeDirs() {
   try {
+    await fs.mkdir(ASSET_TEMPLATES_DIR, { recursive: true });
     await fs.mkdir(TEMPLATES_DIR, { recursive: true });
     await fs.mkdir(REPORTS_DIR, { recursive: true });
     await fs.mkdir(path.dirname(DB_FILE), { recursive: true });
@@ -53,6 +58,41 @@ async function getDatabase(): Promise<Database> {
 // Save database
 async function saveDatabase(db: Database): Promise<void> {
   await fs.writeFile(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
+}
+
+function getTemplateName(fileName: string): string {
+  return path
+    .basename(fileName, path.extname(fileName))
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function inferFieldType(name: string): string {
+  const lowerName = name.toLowerCase();
+  return lowerName.includes('description') ||
+    lowerName.includes('notes') ||
+    lowerName.includes('remarks') ||
+    lowerName.includes('comments')
+    ? 'textarea'
+    : 'text';
+}
+
+async function extractFields(buffer: Buffer): Promise<Array<{ name: string; type: string }>> {
+  const result = await mammoth.extractRawText({ buffer });
+  const fieldsSet = new Set<string>();
+
+  for (const match of result.value.matchAll(FIELD_REGEX)) {
+    fieldsSet.add((match[1] || match[2]).trim());
+  }
+
+  return Array.from(fieldsSet).map((name) => ({
+    name,
+    type: inferFieldType(name),
+  }));
+}
+
+function getAssetTemplatePath(id: string): string {
+  return path.join(ASSET_TEMPLATES_DIR, path.basename(decodeURIComponent(id)));
 }
 
 // Save template
@@ -90,8 +130,39 @@ export async function saveTemplate(
 // Get all templates
 export async function getAllTemplates(): Promise<TemplateMetadata[]> {
   await initializeDirs();
-  const db = await getDatabase();
-  return db.templates.sort(
+  const files = await fs.readdir(ASSET_TEMPLATES_DIR);
+  const templates = (
+    await Promise.all(
+    files
+      .filter((fileName) => fileName.toLowerCase().endsWith('.docx'))
+      .map(async (fileName) => {
+        try {
+          const templatePath = path.join(ASSET_TEMPLATES_DIR, fileName);
+          const [buffer, stats] = await Promise.all([
+            fs.readFile(templatePath),
+            fs.stat(templatePath),
+          ]);
+          const fields = await extractFields(buffer);
+          const updatedAt = stats.mtime.toISOString();
+
+          return {
+            id: encodeURIComponent(fileName),
+            name: getTemplateName(fileName),
+            fileName,
+            fields,
+            createdAt: updatedAt,
+            updatedAt,
+            fieldCount: fields.length,
+          };
+        } catch (error) {
+          console.warn(`Skipping invalid DOCX template "${fileName}":`, error);
+          return null;
+        }
+      })
+    )
+  ).filter((template): template is TemplateMetadata => template !== null);
+
+  return templates.sort(
     (a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
@@ -100,14 +171,33 @@ export async function getAllTemplates(): Promise<TemplateMetadata[]> {
 // Get template by ID
 export async function getTemplate(id: string): Promise<TemplateMetadata | null> {
   await initializeDirs();
-  const db = await getDatabase();
-  return db.templates.find((t) => t.id === id) || null;
+  try {
+    const templatePath = getAssetTemplatePath(id);
+    const [buffer, stats] = await Promise.all([
+      fs.readFile(templatePath),
+      fs.stat(templatePath),
+    ]);
+    const fileName = path.basename(templatePath);
+    const fields = await extractFields(buffer);
+    const updatedAt = stats.mtime.toISOString();
+
+    return {
+      id: encodeURIComponent(fileName),
+      name: getTemplateName(fileName),
+      fileName,
+      fields,
+      createdAt: updatedAt,
+      updatedAt,
+      fieldCount: fields.length,
+    };
+  } catch {
+    return null;
+  }
 }
 
 // Get template buffer
 export async function getTemplateBuffer(id: string): Promise<Buffer> {
-  const templatePath = path.join(TEMPLATES_DIR, `${id}.docx`);
-  return await fs.readFile(templatePath);
+  return await fs.readFile(getAssetTemplatePath(id));
 }
 
 // Delete template
